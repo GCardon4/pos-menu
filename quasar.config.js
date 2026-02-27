@@ -32,6 +32,12 @@ export default defineConfig((/* ctx */) => {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
+      env: {
+        SUPABASE_URL: 'https://lyiihvjiupenpbdyusvk.supabase.co',
+        SUPABASE_KEY:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5aWlodmppdXBlbnBiZHl1c3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTc4MTIsImV4cCI6MjA4Nzc5MzgxMn0.tQjiXptejuyDAilQHvhvFpnI1Of0s8g5UaV_YL1YdiE',
+      },
+
       target: {
         browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
         node: 'node20',
