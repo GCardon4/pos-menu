@@ -4,15 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1978e5',
-        'primary-dark': '#b3e600',
-        'background-light': '#f6f7f8',
-        'sidebar-light': '#e8eaed',
-        'border-accent': '#ccff00',
-        'background-dark': '#111821',
+        primary: '#11d4c4',
+        'primary-dark': '#0fa99c',
+        'primary-light': '#a1f0eb',
+        'background-light': '#f8fafc', // Light slate
+        'sidebar-light': '#ffffff',
+        'border-accent': '#e2e8f0', // Light slate border
+        'background-dark': '#111821', // Keeping it for fallback or explicit dark usage, though standardizing on light
       },
       fontFamily: {
-        display: 'Inter',
+        display: ['Inter', 'sans-serif'],
         sans: ['Work Sans', 'sans-serif'],
       },
     },

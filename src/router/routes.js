@@ -1,12 +1,7 @@
 const routes = [
   {
     path: '/',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [
-      { path: '', component: () => import('pages/IndexPage.vue') },
-      { path: 'cajas', component: () => import('pages/CajasPage.vue') },
-    ],
+    redirect: '/login',
   },
 
   // Rutas por rol
