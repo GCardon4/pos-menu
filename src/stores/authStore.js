@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { supabase } from 'boot/supabase'
 import { Notify } from 'quasar'
 
+// Guardamos la suscripción fuera del store para registrarla UNA sola vez
+// y evitar listeners duplicados al navegar o recalgar módulos.
+let _authSubscription = null
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
@@ -18,8 +22,10 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    // Inicializa la sesión del usuario
-    async initializeAuth() {
+    // Inicializa la sesión y registra el listener UNA sola vez.
+    // Acepta un callback onSignOut para que boot/auth.js pueda redirigir
+    // ante cualquier tipo de cierre de sesión (manual, expiración, otro tab).
+    async initializeAuth(onSignOut = null) {
       try {
         const {
           data: { session },
@@ -31,23 +37,30 @@ export const useAuthStore = defineStore('auth', {
           await this.loadUserProfile()
         }
 
-        // Escucha cambios en la autenticación
-        supabase.auth.onAuthStateChange(async (event, session) => {
-          this.session = session
-          this.user = session?.user || null
+        // Registrar listener solo si no existe ya
+        if (!_authSubscription) {
+          const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+            this.session = session
+            this.user = session?.user ?? null
 
-          if (session?.user) {
-            await this.loadUserProfile()
-          } else {
-            this.profile = null
-          }
-        })
+            if (event === 'SIGNED_OUT' || !session) {
+              this.profile = null
+              // Notificar al boot/auth para redirigir
+              if (typeof onSignOut === 'function') onSignOut()
+              return
+            }
+
+            if (session.user) {
+              await this.loadUserProfile()
+            }
+          })
+          _authSubscription = data.subscription
+        }
       } catch (error) {
         console.error('Error inicializando autenticación:', error)
       }
     },
 
-    // Carga el perfil del usuario desde la base de datos
     async loadUserProfile() {
       if (!this.user) return
 
@@ -65,7 +78,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Inicia sesión con email y contraseña
     async login(email, password) {
       this.loading = true
       try {
@@ -80,12 +92,7 @@ export const useAuthStore = defineStore('auth', {
         this.session = data.session
         await this.loadUserProfile()
 
-        Notify.create({
-          type: 'positive',
-          message: 'Inicio de sesión exitoso',
-          position: 'top',
-        })
-
+        Notify.create({ type: 'positive', message: 'Inicio de sesión exitoso', position: 'top' })
         return { success: true, data }
       } catch (error) {
         console.error('Error en login:', error)
@@ -100,56 +107,18 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Registra un nuevo usuario
-    async register(email, password, userData = {}) {
-      this.loading = true
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: userData,
-          },
-        })
-
-        if (error) throw error
-
-        Notify.create({
-          type: 'positive',
-          message: 'Registro exitoso. Revisa tu email para confirmar tu cuenta.',
-          position: 'top',
-        })
-
-        return { success: true, data }
-      } catch (error) {
-        console.error('Error en registro:', error)
-        Notify.create({
-          type: 'negative',
-          message: error.message || 'Error al registrar usuario',
-          position: 'top',
-        })
-        return { success: false, error }
-      } finally {
-        this.loading = false
-      }
-    },
-
-    // Cierra la sesión del usuario
     async logout() {
       this.loading = true
       try {
-        const { error } = await supabase.auth.signOut()
+        // scope: 'global' revoca el token en el servidor (todos los dispositivos)
+        const { error } = await supabase.auth.signOut({ scope: 'global' })
         if (error) throw error
 
+        // El listener onAuthStateChange dispara SIGNED_OUT y limpia el state
+        // pero también lo limpiamos aquí por si acaso
         this.user = null
         this.profile = null
         this.session = null
-
-        Notify.create({
-          type: 'info',
-          message: 'Sesión cerrada correctamente',
-          position: 'top',
-        })
 
         return { success: true }
       } catch (error) {
