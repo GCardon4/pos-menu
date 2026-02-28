@@ -1,5 +1,5 @@
 <template>
-  <q-layout>
+  <q-layout view="hHh LpR lFf">
     <q-page-container>
       <q-page class="bg-background-light dark:bg-background-dark font-display">
         <div
@@ -70,6 +70,7 @@
                     class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent h-14 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-0 text-base font-normal px-2"
                     placeholder="name@example.com"
                     type="email"
+                    @keyup.enter="handleLogin"
                   />
                 </div>
               </label>
@@ -93,6 +94,7 @@
                     class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent h-14 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-0 text-base font-normal px-2"
                     placeholder="••••••••"
                     :type="showPassword ? 'text' : 'password'"
+                    @keyup.enter="handleLogin"
                   />
                   <div
                     class="text-slate-400 flex items-center justify-center pr-4 pl-2 cursor-pointer hover:text-primary transition-colors"

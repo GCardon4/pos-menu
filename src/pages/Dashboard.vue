@@ -399,7 +399,6 @@
 </template>
 
 <script setup>
-import { defineOptions } from 'vue'
 defineOptions({ name: 'ManagerDashboard' })
 </script>
 

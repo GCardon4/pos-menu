@@ -133,7 +133,7 @@
                   <h2 class="text-lg font-bold text-slate-800 whitespace-nowrap">Main Floor</h2>
                   <div class="h-[1px] w-full bg-slate-200"></div>
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                    >4 Tables</span
+                    >4 Tables</span
                   >
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -279,7 +279,7 @@
                   <h2 class="text-lg font-bold text-slate-800 whitespace-nowrap">Terrace</h2>
                   <div class="h-[1px] w-full bg-slate-200"></div>
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                    >3 Tables</span
+                    >3 Tables</span
                   >
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -391,7 +391,7 @@
                   <h2 class="text-lg font-bold text-slate-800 whitespace-nowrap">VIP Lounge</h2>
                   <div class="h-[1px] w-full bg-slate-200"></div>
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                    >1 Table</span
+                    >1 Table</span
                   >
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
