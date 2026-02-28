@@ -97,14 +97,31 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from 'stores/authStore'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 
-const handleLogin = () => {
-  console.log('Login attempt:', email.value)
-  // Logic hook for future auth
+const ROLE_ROUTES = {
+  1: '/admin',
+  2: '/dashboard',
+  3: '/mesas',
+  4: '/store',
+}
+
+const handleLogin = async () => {
+  const result = await authStore.login(email.value, password.value)
+
+  if (result.success) {
+    const roleId = authStore.userRole
+    const target = ROLE_ROUTES[roleId] ?? '/'
+    router.push(target)
+  }
 }
 </script>
 
