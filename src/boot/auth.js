@@ -4,8 +4,8 @@ import { useAuthStore } from 'stores/authStore'
 const ROLE_ROUTES = {
   1: '/admin',
   2: '/dashboard',
-  3: '/mesas',
-  4: '/store',
+  3: '/store',
+  4: '/bodega',
 }
 
 export default boot(async ({ router }) => {
@@ -33,8 +33,11 @@ export default boot(async ({ router }) => {
       return { path: ROLE_ROUTES[authStore.userRole] ?? '/' }
     }
 
-    if (to.meta.role !== undefined && authStore.userRole !== to.meta.role) {
-      return { path: ROLE_ROUTES[authStore.userRole] ?? '/login' }
+    if (to.meta.role !== undefined) {
+      const allowed = Array.isArray(to.meta.role) ? to.meta.role : [to.meta.role]
+      if (!allowed.includes(authStore.userRole)) {
+        return { path: ROLE_ROUTES[authStore.userRole] ?? '/login' }
+      }
     }
   })
 })

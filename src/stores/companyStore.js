@@ -202,24 +202,26 @@ export const useCompanyStore = defineStore('company', {
       this.loadingProfile = true
       try {
         // Usamos supabaseAdmin (persistSession: false) para que el signUp
-        // NO reemplace la sesión activa del superAdmin.
+        // NO reemplace la sesión activa del usuario actual.
         const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
           email,
           password,
-          options: { data: profilePayload },
         })
 
         if (authError) throw authError
+        if (!authData.user) throw new Error('No se pudo crear el usuario en Auth.')
 
-        // Actualizar el perfil creado por el trigger con los datos adicionales
-        if (authData.user && Object.keys(profilePayload).length > 0) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update(profilePayload)
-            .eq('id', authData.user.id)
+        // Upsert del perfil: crea la fila si no existe (trigger ausente o lento)
+        // o la actualiza si el trigger ya la creó.
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            email,
+            ...profilePayload,
+          })
 
-          if (profileError) throw profileError
-        }
+        if (profileError) throw profileError
 
         Notify.create({
           type: 'positive',

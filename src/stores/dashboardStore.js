@@ -20,7 +20,7 @@ const PERIODS = {
 
 // ── Campos que se leen de la tabla transactions ────────────────
 // Ajusta estos nombres si tu tabla usa columnas diferentes.
-const TX_COLUMNS = 'id, total, created_at, company_id, mesa_id, category, payment_method'
+const TX_COLUMNS = 'id, total, created_at, company_id, table_id, category, payment_method'
 
 export const useDashboardStore = defineStore('dashboard', {
   state: () => ({
@@ -39,17 +39,18 @@ export const useDashboardStore = defineStore('dashboard', {
     prevRevenue: (state) =>
       state.prevTransactions.reduce((sum, t) => sum + (Number(t.total) || 0), 0),
 
-    revenueChangePct: (state, getters) => {
-      if (!getters.prevRevenue) return null
-      return ((getters.totalRevenue - getters.prevRevenue) / getters.prevRevenue) * 100
+    // Pinia: para acceder a otros getters se usa `this` (función regular, no arrow)
+    revenueChangePct() {
+      if (!this.prevRevenue) return null
+      return ((this.totalRevenue - this.prevRevenue) / this.prevRevenue) * 100
     },
 
     // ── Tickets ───────────────────────────────────────────────
     transactionCount: (state) => state.transactions.length,
 
-    avgTicket: (state, getters) => {
-      if (!state.transactions.length) return 0
-      return getters.totalRevenue / state.transactions.length
+    avgTicket() {
+      if (!this.transactions.length) return 0
+      return this.totalRevenue / this.transactions.length
     },
 
     // ── Por hora (para gráfica) ───────────────────────────────
@@ -63,35 +64,36 @@ export const useDashboardStore = defineStore('dashboard', {
       return hours
     },
 
-    maxHourlyRevenue: (state, getters) =>
-      Math.max(...getters.salesByHour.map((h) => h.total), 1),
+    maxHourlyRevenue() {
+      return Math.max(...this.salesByHour.map((h) => h.total), 1)
+    },
 
     // 14 slots visibles: 10am → 11pm
-    chartHours: (state, getters) => {
+    chartHours() {
       const SLOTS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
       return SLOTS.map((h) => {
-        const data = getters.salesByHour[h]
+        const data = this.salesByHour[h]
         return {
           label: h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`,
           total: data.total,
           count: data.count,
-          pct: Math.round((data.total / getters.maxHourlyRevenue) * 100),
+          pct: Math.round((data.total / this.maxHourlyRevenue) * 100),
         }
       })
     },
 
-    // ── Mesas (si transactions tiene mesa_id) ─────────────────
+    // ── Mesas (si transactions tiene table_id) ─────────────────
     activeMesaIds: (state) =>
-      [...new Set(state.transactions.map((t) => t.mesa_id).filter(Boolean))],
+      [...new Set(state.transactions.map((t) => t.table_id).filter(Boolean))],
 
-    topMesas: (state, getters) => {
-      if (!getters.activeMesaIds.length) return []
+    topMesas() {
+      if (!this.activeMesaIds.length) return []
       const map = {}
-      for (const t of state.transactions) {
-        if (!t.mesa_id) continue
-        if (!map[t.mesa_id]) map[t.mesa_id] = { mesa_id: t.mesa_id, total: 0, count: 0 }
-        map[t.mesa_id].total += Number(t.total) || 0
-        map[t.mesa_id].count++
+      for (const t of this.transactions) {
+        if (!t.table_id) continue
+        if (!map[t.table_id]) map[t.table_id] = { table_id: t.table_id, total: 0, count: 0 }
+        map[t.table_id].total += Number(t.total) || 0
+        map[t.table_id].count++
       }
       return Object.values(map)
         .sort((a, b) => b.total - a.total)
@@ -99,10 +101,10 @@ export const useDashboardStore = defineStore('dashboard', {
     },
 
     // ── Categorías (si transactions tiene category) ───────────
-    salesByCategory: (state, getters) => {
-      if (!state.transactions.some((t) => t.category)) return []
+    salesByCategory() {
+      if (!this.transactions.some((t) => t.category)) return []
       const map = {}
-      for (const t of state.transactions) {
+      for (const t of this.transactions) {
         const cat = t.category || 'Otros'
         if (!map[cat]) map[cat] = 0
         map[cat] += Number(t.total) || 0
@@ -111,7 +113,7 @@ export const useDashboardStore = defineStore('dashboard', {
         .map(([name, total]) => ({
           name,
           total,
-          pct: Math.round((total / getters.totalRevenue) * 100),
+          pct: Math.round((total / this.totalRevenue) * 100),
         }))
         .sort((a, b) => b.total - a.total)
     },

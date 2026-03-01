@@ -60,8 +60,8 @@
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
                 <input
                   v-model="globalSearch"
-                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all"
-                  :placeholder="activeSection === 'companies' ? 'Buscar empresa...' : 'Buscar usuario...'"
+                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all"
+                  :placeholder="{ companies: 'Buscar empresa...', users: 'Buscar usuario...', mesas: 'Buscar por número...', products: 'Buscar producto...' }[activeSection] ?? 'Buscar...'"
                 />
               </div>
             </div>
@@ -81,6 +81,22 @@
               >
                 <span class="material-symbols-outlined text-xl">person_add</span>
                 Nuevo usuario
+              </button>
+              <button
+                v-if="activeSection === 'mesas'"
+                @click="openMesaDialog()"
+                class="flex items-center gap-2 bg-primary text-slate-900 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-dark shadow-sm transition-all"
+              >
+                <span class="material-symbols-outlined text-xl">add</span>
+                Nueva mesa
+              </button>
+              <button
+                v-if="activeSection === 'products'"
+                @click="openProductDialog()"
+                class="flex items-center gap-2 bg-primary text-slate-900 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-dark shadow-sm transition-all"
+              >
+                <span class="material-symbols-outlined text-xl">add</span>
+                Nuevo producto
               </button>
             </div>
           </header>
@@ -241,7 +257,7 @@
               <!-- Filter bar -->
               <div class="flex items-center gap-3">
                 <select v-model="filterCompanyId"
-                  class="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none">
+                  class="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                   <option value="">Todas las empresas</option>
                   <option v-for="c in companyStore.companies" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
@@ -324,6 +340,286 @@
                             </button>
                             <button @click="confirmDelete('profile', profile)"
                               class="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Eliminar">
+                              <span class="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- ── SECTION: MESAS ── -->
+            <template v-if="activeSection === 'mesas'">
+              <div class="flex flex-col gap-1 mb-2">
+                <h2 class="text-3xl font-black tracking-tight text-slate-900">Mesas</h2>
+                <p class="text-slate-500 font-medium">Gestión de mesas por empresa.</p>
+              </div>
+
+              <!-- Stats -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+                <div
+                  v-for="(cfg, key) in MESA_STATUS_CONFIG"
+                  :key="key"
+                  class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4"
+                >
+                  <div :class="[cfg.bgLight, 'p-2 rounded-lg']">
+                    <span :class="[cfg.text, 'material-symbols-outlined']">{{ cfg.icon }}</span>
+                  </div>
+                  <div>
+                    <p class="text-slate-500 text-xs font-medium capitalize">{{ cfg.label }}</p>
+                    <h3 class="text-xl font-bold">{{ mesasStore.totalByStatus[key] ?? 0 }}</h3>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filter by company -->
+              <div class="flex items-center gap-3">
+                <select
+                  v-model="filterMesaCompanyId"
+                  class="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:outline-none"
+                >
+                  <option value="">Todas las empresas</option>
+                  <option v-for="c in companyStore.companies" :key="c.id" :value="c.id">
+                    {{ c.name }}
+                  </option>
+                </select>
+                <button
+                  v-if="filterMesaCompanyId"
+                  @click="filterMesaCompanyId = ''"
+                  class="text-xs text-slate-400 hover:text-primary flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-[16px]">close</span>
+                  Limpiar filtro
+                </button>
+              </div>
+
+              <!-- Mesas table -->
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div
+                  class="p-6 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between"
+                >
+                  <h4 class="font-bold text-lg">Registro de Mesas</h4>
+                  <p class="text-sm text-slate-400">{{ filteredMesas.length }} mesa(s)</p>
+                </div>
+
+                <div v-if="mesasStore.loading" class="flex items-center justify-center py-16">
+                  <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+                    >progress_activity</span
+                  >
+                </div>
+
+                <div
+                  v-else-if="filteredMesas.length === 0"
+                  class="flex flex-col items-center justify-center py-16 text-slate-400"
+                >
+                  <span class="material-symbols-outlined text-5xl mb-3">table_restaurant</span>
+                  <p class="font-medium">No hay mesas registradas</p>
+                </div>
+
+                <div v-else class="overflow-x-auto">
+                  <table class="w-full text-left">
+                    <thead
+                      class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-bold tracking-wider"
+                    >
+                      <tr>
+                        <th class="px-6 py-4">Número</th>
+                        <th class="px-6 py-4">Empresa</th>
+                        <th class="px-6 py-4">Estado</th>
+                        <th class="px-6 py-4">Creada</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr
+                        v-for="mesa in filteredMesas"
+                        :key="mesa.id"
+                        class="hover:bg-slate-50/50 transition-colors group"
+                      >
+                        <td class="px-6 py-4">
+                          <div class="flex items-center gap-3">
+                            <div
+                              class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm"
+                            >
+                              {{ String(mesa.number).padStart(2, '0') }}
+                            </div>
+                            <span class="font-semibold text-sm">Mesa {{ mesa.number }}</span>
+                          </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500">
+                          {{ mesa.companies?.name ?? '—' }}
+                        </td>
+                        <td class="px-6 py-4">
+                          <span
+                            :class="[
+                              MESA_STATUS_CONFIG[mesa.status]?.badge ??
+                                'bg-slate-100 text-slate-500',
+                              'text-xs font-bold px-2.5 py-1 rounded-full uppercase',
+                            ]"
+                          >
+                            {{ MESA_STATUS_CONFIG[mesa.status]?.label ?? mesa.status }}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-400">
+                          {{ formatDate(mesa.created_at) }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                          <div
+                            class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <button
+                              @click="openMesaDialog(mesa)"
+                              class="p-2 text-slate-400 hover:text-primary transition-colors"
+                              title="Editar"
+                            >
+                              <span class="material-symbols-outlined text-[20px]">edit</span>
+                            </button>
+                            <button
+                              @click="confirmDelete('mesa', mesa)"
+                              class="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                              title="Eliminar"
+                            >
+                              <span class="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- ── SECTION: PRODUCTS ── -->
+            <template v-if="activeSection === 'products'">
+              <div class="flex flex-col gap-1 mb-2">
+                <h2 class="text-3xl font-black tracking-tight text-slate-900">Productos</h2>
+                <p class="text-slate-500 font-medium">Gestión del catálogo de productos.</p>
+              </div>
+
+              <!-- Stats -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div class="flex justify-between items-start mb-4">
+                    <div class="p-2 bg-primary/10 rounded-lg text-primary">
+                      <span class="material-symbols-outlined">inventory_2</span>
+                    </div>
+                  </div>
+                  <p class="text-slate-500 text-sm font-medium mb-1">Total Productos</p>
+                  <h3 class="text-2xl font-bold">{{ posStore.products.length }}</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div class="flex justify-between items-start mb-4">
+                    <div class="p-2 bg-emerald-50 rounded-lg text-emerald-500">
+                      <span class="material-symbols-outlined">trending_up</span>
+                    </div>
+                  </div>
+                  <p class="text-slate-500 text-sm font-medium mb-1">Precio promedio</p>
+                  <h3 class="text-2xl font-bold">
+                    ${{
+                      posStore.products.length
+                        ? (
+                            posStore.products.reduce((s, p) => s + Number(p.price || 0), 0) /
+                            posStore.products.length
+                          ).toFixed(2)
+                        : '0.00'
+                    }}
+                  </h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div class="flex justify-between items-start mb-4">
+                    <div class="p-2 bg-amber-50 rounded-lg text-amber-500">
+                      <span class="material-symbols-outlined">warehouse</span>
+                    </div>
+                  </div>
+                  <p class="text-slate-500 text-sm font-medium mb-1">Stock total</p>
+                  <h3 class="text-2xl font-bold">
+                    {{ posStore.products.reduce((s, p) => s + (Number(p.stock) || 0), 0) }}
+                  </h3>
+                </div>
+              </div>
+
+              <!-- Products table -->
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div
+                  class="p-6 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between"
+                >
+                  <h4 class="font-bold text-lg">Catálogo de Productos</h4>
+                  <p class="text-sm text-slate-400">{{ filteredProducts.length }} producto(s)</p>
+                </div>
+
+                <div v-if="posStore.loadingProduct" class="flex items-center justify-center py-16">
+                  <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+                    >progress_activity</span
+                  >
+                </div>
+
+                <div
+                  v-else-if="filteredProducts.length === 0"
+                  class="flex flex-col items-center justify-center py-16 text-slate-400"
+                >
+                  <span class="material-symbols-outlined text-5xl mb-3">inventory_2</span>
+                  <p class="font-medium">No hay productos registrados</p>
+                </div>
+
+                <div v-else class="overflow-x-auto">
+                  <table class="w-full text-left">
+                    <thead
+                      class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-bold tracking-wider"
+                    >
+                      <tr>
+                        <th class="px-6 py-4">Producto</th>
+                        <th class="px-6 py-4">SKU</th>
+                        <th class="px-6 py-4">Precio</th>
+                        <th class="px-6 py-4">Costo</th>
+                        <th class="px-6 py-4">Stock</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr
+                        v-for="product in filteredProducts"
+                        :key="product.id"
+                        class="hover:bg-slate-50/50 transition-colors group"
+                      >
+                        <td class="px-6 py-4">
+                          <div class="flex items-center gap-3">
+                            <div
+                              class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm"
+                            >
+                              {{ product.name?.charAt(0)?.toUpperCase() ?? '?' }}
+                            </div>
+                            <span class="font-semibold text-sm">{{ product.name }}</span>
+                          </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500">{{ product.sku ?? '—' }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-slate-800">
+                          ${{ Number(product.price ?? 0).toFixed(2) }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500">
+                          ${{ Number(product.cost ?? 0).toFixed(2) }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500">
+                          {{ product.stock ?? '—' }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                          <div
+                            class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <button
+                              @click="openProductDialog(product)"
+                              class="p-2 text-slate-400 hover:text-primary transition-colors"
+                              title="Editar"
+                            >
+                              <span class="material-symbols-outlined text-[20px]">edit</span>
+                            </button>
+                            <button
+                              @click="confirmDelete('product', product)"
+                              class="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                              title="Eliminar"
+                            >
                               <span class="material-symbols-outlined text-[20px]">delete</span>
                             </button>
                           </div>
@@ -454,8 +750,8 @@
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:outline-none">
                 <option :value="1">Super Admin</option>
                 <option :value="2">Manager</option>
-                <option :value="3">Mesero</option>
-                <option :value="4">Tienda</option>
+                <option :value="3">Cajas</option>
+                <option :value="4">Bodega</option>
               </select>
             </div>
             <div>
@@ -493,6 +789,189 @@
     </q-dialog>
 
     <!-- ════════════════════════════════════════ -->
+    <!-- DIALOG: MESA FORM                       -->
+    <!-- ════════════════════════════════════════ -->
+    <q-dialog v-model="mesaDialog" persistent>
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              {{ editingMesa ? 'Editar mesa' : 'Nueva mesa' }}
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              {{ editingMesa ? 'Modifica los datos de la mesa' : 'Registra una nueva mesa' }}
+            </p>
+          </div>
+          <button
+            @click="mesaDialog = false"
+            class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form @submit.prevent="submitMesa" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Número *</label>
+              <input
+                v-model.number="mesaForm.number"
+                type="number"
+                required
+                min="1"
+                placeholder="1"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Estado</label>
+              <select
+                v-model="mesaForm.status"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:outline-none"
+              >
+                <option value="available">Available</option>
+                <option value="occupied">Occupied</option>
+                <option value="cleaning">Cleaning</option>
+                <option value="reserved">Reserved</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Empresa *</label>
+            <select
+              v-model="mesaForm.company_id"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:outline-none"
+            >
+              <option value="">Seleccionar empresa</option>
+              <option v-for="c in companyStore.companies" :key="c.id" :value="c.id">
+                {{ c.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button
+              type="button"
+              @click="mesaDialog = false"
+              class="flex-1 border border-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="mesasStore.loading"
+              class="flex-1 bg-primary text-slate-900 font-bold py-2.5 rounded-xl hover:bg-primary-dark transition-colors text-sm disabled:opacity-60"
+            >
+              {{ mesasStore.loading ? 'Guardando...' : editingMesa ? 'Guardar cambios' : 'Crear mesa' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </q-dialog>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- DIALOG: PRODUCT FORM                    -->
+    <!-- ════════════════════════════════════════ -->
+    <q-dialog v-model="productDialog" persistent>
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              {{ editingProduct ? 'Editar producto' : 'Nuevo producto' }}
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              {{ editingProduct ? 'Modifica los datos del producto' : 'Agrega un nuevo producto al catálogo' }}
+            </p>
+          </div>
+          <button
+            @click="productDialog = false"
+            class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form @submit.prevent="submitProduct" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nombre *</label>
+            <input
+              v-model="productForm.name"
+              type="text"
+              required
+              placeholder="Nombre del producto"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Precio *</label>
+              <input
+                v-model.number="productForm.price"
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Costo</label>
+              <input
+                v-model.number="productForm.cost"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">SKU</label>
+              <input
+                v-model="productForm.sku"
+                type="text"
+                placeholder="SKU-001"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Stock</label>
+              <input
+                v-model.number="productForm.stock"
+                type="number"
+                min="0"
+                placeholder="0"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button
+              type="button"
+              @click="productDialog = false"
+              class="flex-1 border border-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="posStore.loadingProduct"
+              class="flex-1 bg-primary text-slate-900 font-bold py-2.5 rounded-xl hover:bg-primary-dark transition-colors text-sm disabled:opacity-60"
+            >
+              {{ posStore.loadingProduct ? 'Guardando...' : editingProduct ? 'Guardar cambios' : 'Crear producto' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </q-dialog>
+
+    <!-- ════════════════════════════════════════ -->
     <!-- DIALOG: CONFIRMAR ELIMINACIÓN           -->
     <!-- ════════════════════════════════════════ -->
     <q-dialog v-model="deleteDialog">
@@ -501,15 +980,11 @@
           <span class="material-symbols-outlined text-3xl">delete_forever</span>
         </div>
         <h3 class="text-lg font-bold text-slate-800 mb-2">
-          ¿Eliminar {{ deleteTarget?.type === 'company' ? 'empresa' : 'usuario' }}?
+          ¿Eliminar {{ deleteTypeLabel }}?
         </h3>
         <p class="text-sm text-slate-500 mb-6">
           Se eliminará permanentemente
-          <span class="font-semibold text-slate-700">
-            {{ deleteTarget?.type === 'company'
-              ? deleteTarget.item.name
-              : (deleteTarget?.item?.full_name ?? deleteTarget?.item?.email) }}
-          </span>.
+          <span class="font-semibold text-slate-700">{{ deleteItemLabel }}</span>.
           Esta acción no se puede deshacer.
         </p>
         <div class="flex gap-3">
@@ -518,7 +993,7 @@
             Cancelar
           </button>
           <button @click="executeDelete"
-            :disabled="companyStore.loading || companyStore.loadingProfile"
+            :disabled="companyStore.loading || companyStore.loadingProfile || mesasStore.loading || posStore.loadingProduct"
             class="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl hover:bg-red-600 transition-colors text-sm disabled:opacity-60">
             Eliminar
           </button>
@@ -534,17 +1009,23 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCompanyStore } from 'stores/companyStore'
 import { useAuthStore } from 'stores/authStore'
+import { useMesasStore } from 'stores/mesasStore'
+import { usePosStore } from 'stores/posStore'
 
 defineOptions({ name: 'AdminDashboard' })
 
 const router = useRouter()
 const companyStore = useCompanyStore()
 const authStore = useAuthStore()
+const mesasStore = useMesasStore()
+const posStore = usePosStore()
 
 // ── Nav ──
 const navItems = [
   { key: 'companies', label: 'Empresas', icon: 'business' },
   { key: 'users', label: 'Usuarios', icon: 'group' },
+  { key: 'mesas', label: 'Mesas', icon: 'table_restaurant' },
+  { key: 'products', label: 'Productos', icon: 'inventory_2' },
 ]
 const activeSection = ref('companies')
 const globalSearch = ref('')
@@ -559,8 +1040,8 @@ const avatarInitial = computed(() => {
 const ROLES = {
   1: { label: 'Super Admin', badge: 'bg-violet-50 text-violet-600', bg: 'bg-violet-50', text: 'text-violet-500', icon: 'admin_panel_settings' },
   2: { label: 'Manager', badge: 'bg-blue-50 text-blue-600', bg: 'bg-blue-50', text: 'text-blue-500', icon: 'manage_accounts' },
-  3: { label: 'Mesero', badge: 'bg-amber-50 text-amber-600', bg: 'bg-amber-50', text: 'text-amber-500', icon: 'table_restaurant' },
-  4: { label: 'Tienda', badge: 'bg-emerald-50 text-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-500', icon: 'storefront' },
+  3: { label: 'Cajas', badge: 'bg-amber-50 text-amber-600', bg: 'bg-amber-50', text: 'text-amber-500', icon: 'point_of_sale' },
+  4: { label: 'Bodega', badge: 'bg-emerald-50 text-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-500', icon: 'inventory_2' },
 }
 const roleInfo = (id) => ROLES[id] ?? { label: 'Sin rol', badge: 'bg-slate-100 text-slate-500', bg: 'bg-slate-100', text: 'text-slate-400', icon: 'person' }
 
@@ -655,11 +1136,93 @@ const confirmDelete = (type, item) => {
 
 const executeDelete = async () => {
   const { type, item } = deleteTarget.value
-  const result = type === 'company'
-    ? await companyStore.deleteCompany(item.id)
-    : await companyStore.deleteProfile(item.id)
-  if (result.success) deleteDialog.value = false
+  let result
+  if (type === 'company') result = await companyStore.deleteCompany(item.id)
+  else if (type === 'profile') result = await companyStore.deleteProfile(item.id)
+  else if (type === 'mesa') result = await mesasStore.deleteTable(item.id)
+  else if (type === 'product') result = await posStore.deleteProduct(item.id)
+  if (result?.success) deleteDialog.value = false
 }
+
+// ── Mesas ──
+const MESA_STATUS_CONFIG = {
+  available: { label: 'Available', bgLight: 'bg-emerald-50', text: 'text-emerald-500', icon: 'table_bar', badge: 'bg-emerald-50 text-emerald-600' },
+  occupied: { label: 'Occupied', bgLight: 'bg-red-50', text: 'text-red-500', icon: 'person', badge: 'bg-red-50 text-red-600' },
+  cleaning: { label: 'Cleaning', bgLight: 'bg-amber-50', text: 'text-amber-500', icon: 'cleaning_services', badge: 'bg-amber-50 text-amber-600' },
+  reserved: { label: 'Reserved', bgLight: 'bg-purple-50', text: 'text-purple-500', icon: 'bookmark', badge: 'bg-purple-50 text-purple-600' },
+}
+
+const filterMesaCompanyId = ref('')
+
+const filteredMesas = computed(() => {
+  let list = mesasStore.tables
+  if (filterMesaCompanyId.value) list = list.filter((m) => m.company_id === filterMesaCompanyId.value)
+  const q = globalSearch.value.toLowerCase()
+  if (q) list = list.filter((m) => String(m.number).includes(q))
+  return list
+})
+
+const mesaDialog = ref(false)
+const editingMesa = ref(null)
+const mesaForm = ref({})
+
+const openMesaDialog = (mesa = null) => {
+  editingMesa.value = mesa
+  mesaForm.value = mesa
+    ? { number: mesa.number, status: mesa.status, company_id: mesa.company_id ?? '' }
+    : { number: '', status: 'available', company_id: '' }
+  mesaDialog.value = true
+}
+
+const submitMesa = async () => {
+  const result = editingMesa.value
+    ? await mesasStore.updateTable(editingMesa.value.id, mesaForm.value)
+    : await mesasStore.createTable(mesaForm.value)
+  if (result.success) mesaDialog.value = false
+}
+
+// ── Products ──
+const filteredProducts = computed(() => {
+  const q = globalSearch.value.toLowerCase()
+  return posStore.products.filter(
+    (p) => !q || p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q),
+  )
+})
+
+const productDialog = ref(false)
+const editingProduct = ref(null)
+const productForm = ref({})
+
+const openProductDialog = (product = null) => {
+  editingProduct.value = product
+  productForm.value = product
+    ? { name: product.name, price: product.price ?? 0, cost: product.cost ?? 0, sku: product.sku ?? '', stock: product.stock ?? 0 }
+    : { name: '', price: 0, cost: 0, sku: '', stock: 0 }
+  productDialog.value = true
+}
+
+const submitProduct = async () => {
+  const result = editingProduct.value
+    ? await posStore.updateProduct(editingProduct.value.id, productForm.value)
+    : await posStore.createProduct(productForm.value)
+  if (result.success) productDialog.value = false
+}
+
+// ── Delete (extended for mesa + product) ──
+const deleteTypeLabel = computed(() => {
+  const labels = { company: 'empresa', profile: 'usuario', mesa: 'mesa', product: 'producto' }
+  return labels[deleteTarget.value?.type] ?? 'elemento'
+})
+
+const deleteItemLabel = computed(() => {
+  const t = deleteTarget.value
+  if (!t) return ''
+  if (t.type === 'company') return t.item.name
+  if (t.type === 'profile') return t.item.full_name ?? t.item.email
+  if (t.type === 'mesa') return `Mesa ${t.item.number}`
+  if (t.type === 'product') return t.item.name
+  return ''
+})
 
 // ── Logout ──
 const handleLogout = async () => {
@@ -669,6 +1232,11 @@ const handleLogout = async () => {
 
 // ── Init ──
 onMounted(async () => {
-  await Promise.all([companyStore.fetchCompanies(), companyStore.fetchProfiles()])
+  await Promise.all([
+    companyStore.fetchCompanies(),
+    companyStore.fetchProfiles(),
+    mesasStore.fetchTables(),
+    posStore.fetchProducts(),
+  ])
 })
 </script>

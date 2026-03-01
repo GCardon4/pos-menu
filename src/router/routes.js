@@ -24,7 +24,7 @@ const routes = [
   {
     path: '/mesas',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true, role: 3 },
+    meta: { requiresAuth: true, role: 2 },
     children: [
       { path: '', component: () => import('pages/MesasPage.vue') },
     ],
@@ -32,9 +32,25 @@ const routes = [
   {
     path: '/store',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true, role: 4 },
+    meta: { requiresAuth: true, role: [2, 3] },
     children: [
       { path: '', component: () => import('pages/StorePage.vue') },
+    ],
+  },
+  {
+    path: '/bodega',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, role: [2, 4] },
+    children: [
+      { path: '', component: () => import('pages/BodegaPage.vue') },
+    ],
+  },
+  {
+    path: '/cajas',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', component: () => import('pages/CajasPage.vue') },
     ],
   },
 

@@ -102,16 +102,16 @@ const displayName = computed(
 
 const avatarInitial = computed(() => displayName.value.charAt(0).toUpperCase())
 
-const ROLE_LABELS = { 1: 'Super Admin', 2: 'Manager', 3: 'Mesero', 4: 'Tienda' }
+const ROLE_LABELS = { 1: 'Super Admin', 2: 'Manager', 3: 'Cajas', 4: 'Bodega' }
 const roleLabel = computed(() => ROLE_LABELS[authStore.userRole] ?? 'Sin rol')
 
 // ── Navigation links por rol ──
 const ALL_LINKS = [
-  { title: 'Super Admin', caption: 'Empresas y usuarios', icon: 'admin_panel_settings', link: '#/admin', roles: [1] },
-  { title: 'Dashboard', caption: 'Análisis y reportes', icon: 'dashboard', link: '#/dashboard', roles: [2] },
-  { title: 'Gestión de Mesas', caption: 'Distribución y estado', icon: 'table_restaurant', link: '#/mesas', roles: [3] },
-  { title: 'Tienda', caption: 'Productos y ventas', icon: 'storefront', link: '#/store', roles: [4] },
-  { title: 'POS - Cajas', caption: 'Módulo de pedidos', icon: 'point_of_sale', link: '#/cajas', roles: [1, 2, 3, 4] },
+  { title: 'Super Admin',    caption: 'Empresas y usuarios',   icon: 'admin_panel_settings', link: '#/admin',     roles: [1] },
+  { title: 'Dashboard',      caption: 'Análisis y reportes',   icon: 'dashboard',            link: '#/dashboard', roles: [2] },
+  { title: 'Mesas',          caption: 'Distribución y estado', icon: 'table_restaurant',     link: '#/mesas',     roles: [2] },
+  { title: 'POS - Cajas',    caption: 'Mesas y órdenes',       icon: 'point_of_sale',        link: '#/store',     roles: [2, 3] },
+  { title: 'Bodega',         caption: 'Inventario y productos',icon: 'inventory_2',          link: '#/bodega',    roles: [2, 4] },
 ]
 
 const visibleLinks = computed(() =>
